@@ -1,0 +1,78 @@
+{
+    "Description": "Deploying Helloworld application",
+    "Parameters": {
+        "InstanceType": {
+            "AllowedValues": [
+                "t2.micro",
+                "t2.small",
+                "t2.medium",
+                "t2.large"
+            ],
+            "ConstraintDescription": "must be a valid EC2 T2 instance type.",
+            "Default": "t2.micro",
+            "Description": "WebServer EC2 instance type",
+            "Type": "String"
+        },
+        "KeyPair": {
+            "ConstraintDescription": "must be the name of an existing EC2 KeyPair.",
+            "Description": "Name of an existing EC2 KeyPair to SSH",
+            "Type": "AWS::EC2::KeyPair::KeyName"
+        }
+    },
+    "Resources": {
+        "LaunchConfiguration": {
+            "Properties": {
+                "IamInstanceProfile": {
+                    "Ref": "InstanceProfile"
+                },
+                "ImageId": "ami-a4c7edb2",
+                "InstanceType": {
+                    "Ref": "InstanceType"
+                },
+                "KeyName": {
+                    "Ref": "KeyPair"
+                },
+                "SecurityGroups": [
+                    {
+                        "Ref": "SecurityGroup"
+                    }
+                ],
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "\n",
+                            [
+                                "/usr/local/bin/ansible-pull -U https://github.com/russest3/ansible-ec2 helloworld.yml -i localhost\n",
+                                "echo '*/10 * * * * /usr/local/bin/ansible-pull -U https://github.com/russest3/ansible-ec2 helloworld.yml -i localhost\n' > /etc/cron.d/ansible-pull"
+                            ]
+                        ]
+                    }
+                }
+            },
+            "Type": "AWS::AutoScaling::LaunchConfiguration"
+        },
+        "SecurityGroup": {
+            "Properties": {
+                "GroupDescription": "Allow SSH and TCP/3000 access",
+                "SecurityGroupIngress": [
+                    {
+                        "CidrIp": "0.0.0.0/0",
+                        "FromPort": "22",
+                        "IpProtocol": "tcp",
+                        "ToPort": "22"
+                    },
+                    {
+                        "CidrIp": "0.0.0.0/0",
+                        "FromPort": "3000",
+                        "IpProtocol": "tcp",
+                        "ToPort": "3000"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "VpcId"
+                }
+            },
+            "Type": "AWS::EC2::SecurityGroup"
+        }
+    }
+}
